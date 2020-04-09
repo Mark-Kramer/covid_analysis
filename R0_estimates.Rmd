@@ -1,0 +1,66 @@
+Data from covidtracking.com
+
+```{r}
+setwd("~/Documents/GitHub/covid_analysis")
+library(EpiEstim)
+library(tidyverse)
+states <- read.csv('daily.csv')
+states
+```
+
+Choose the state of interest, get incidence (positive is cumulative)
+```{r}
+statename = 'MA'
+ST <- states %>% filter(state == statename) %>% arrange(date) %>% select(date,state,positive)
+I <- diff(ST$positive)
+ST$incidence <- c(ST$positive[1],I)
+ST
+```
+
+Estimates from https://www.ncbi.nlm.nih.gov/pubmed/32145466
+```{r}
+mean_si = 3.96
+std_si = 4.75
+
+std_mean_si = (3.53-3.96)/(-1.96)
+std_std_si = (4.46-4.75)/(-1.96)
+
+min_mean_si = 2.46
+max_mean_si = 5.46
+
+min_std_si =  3.75
+max_std_si = 5.75
+
+n1 = 100
+n2 = 100
+```
+
+Estimate R using EpiEstim package
+```{r}
+res <- estimate_R(ST$incidence, method = "uncertain_si",
+config = make_config(list(
+mean_si = mean_si, std_mean_si = std_mean_si,
+min_mean_si = min_mean_si, max_mean_si = max_mean_si,
+std_si = std_si, std_std_si = std_std_si,
+min_std_si = min_std_si, max_std_si = max_std_si,
+n1 = n1, n2 = n2)))
+```
+
+Change names for easier use with ggplot
+```{r}
+RES <- res$R
+names(RES)[names(RES)=='Mean(R)']<-'Mean'
+names(RES)[names(RES)=='Quantile.0.05(R)']<-'LowQuantile'
+names(RES)[names(RES)=='Quantile.0.95(R)']<-'HighQuantile'
+RES
+```
+
+R estimate with 95% quantiles (rightmost plot is today, each point is a day in time)
+```{r}
+ggplot(data = RES, mapping = aes(t_start)) + 
+  geom_line(aes(y=Mean)) +
+  geom_ribbon(aes(ymin=LowQuantile,ymax=HighQuantile),alpha=0.2) +
+  xlab('days') + ylab('R0 Estimate') + ggtitle(statename)
+```
+
+
