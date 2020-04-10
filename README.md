@@ -19,6 +19,7 @@
 ## Notes
 
 - Define `N` as state's population (from Wikipedia)
+- The model breaks down at long time predictions (i.e., populations < 0).
 
 
 ## Example output
